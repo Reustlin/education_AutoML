@@ -58,4 +58,16 @@ folder_path = '/path/to/folder'
 # Process the folder and get the resulting DataFrame
 df = process_folder(folder_path)
  
-print(df)
+print()
+
+import re
+
+def filter_words(text):
+    pattern = r'\ b[A-ZА-ЯЁ][a-zа-яё]*\b'
+    return re.findall(pattern, text)
+
+text = "Today is Thursday, August 29, 2024 and here are the results:"
+print(filter_words(text))
+
+
+
