@@ -67,7 +67,23 @@ def filter_words(text):
     return re.findall(pattern, text)
 
 text = "Today is Thursday, August 29, 2024 and here are the results:"
-print(filter_words(text))
+print(filter_words(import streamlit as st
+import os
+
+# Создайте папку для сохранения файлов
+save_folder = 'uploads'
+if not os.path.exists(save_folder):
+    os.makedirs(save_folder)
+
+# Загрузите файл
+uploaded_file = st.file_uploader('Выберите файл')
+
+# Если файл загружен, сохраните его в папку
+if uploaded_file is not None:
+    file_path = os.path.join(save_folder, uploaded_file.name)
+    with open(file_path, 'wb') as f:
+        f.write(uploaded_file.read())
+    st.success('Файл сохранен!')
 
 
 
