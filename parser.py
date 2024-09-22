@@ -85,5 +85,35 @@ if uploaded_file is not None:
         f.write(uploaded_file.read())
     st.success('Файл сохранен!')
 
+from sklearn.model_selection import GridSearchCV
+from sklearn.svm import SVC
+from sklearn.datasets import load_iris
+from sklearn.model_selection import StratifiedKFold
+
+# Пример с данными iris
+X, y = load_iris(return_X_y=True)
+
+# Определяем модель
+model = SVC()
+
+# Определяем гиперпараметры для подбора
+param_grid = {'C': [0.1, 1, 10], 'kernel': ['linear', 'rbf']}
+
+# Определяем кросс-валидацию
+cv = StratifiedKFold(n_splits=5)
+
+# Создаем объект GridSearchCV с return_train_score=True
+grid_search = GridSearchCV(model, param_grid, cv=cv, return_train_score=True)
+
+# Обучаем модель
+grid_search.fit(X, y)
+
+# Извлекаем результаты кросс-валидации
+results = grid_search.cv_results_
+
+# Выводим значения на каждом фолде с тестовой выборки
+for fold_idx in range(cv.get_n_splits()):
+    test_scores = results['split{}_test_score'.format(fold_idx)]
+    print(f"Фолд {fold_idx + 1}: {test_scores}")
 
 
