@@ -117,3 +117,48 @@ for fold_idx in range(cv.get_n_splits()):
     print(f"Фолд {fold_idx + 1}: {test_scores}")
 
 
+Да, совершенно верно! 
+
+В коде, который я вам предоставил, 'x' и 'y' - это просто примеры имен столбцов, которые используются для поиска ближайших соседей. Вам нужно заменить эти имена на фактические имена столбцов в ваших датафреймах, которые содержат признаки, по которым нужно искать ближайших соседей. 
+
+Вот как это сделать:
+
+1. Замените 'x' и 'y': 
+    * В строке knn.fit(df2[['x', 'y']]) замените 'x' и 'y' на имена столбцов в df2, которые содержат ваши признаки.
+    * В строке distances, indices = knn.kneighbors(df1[['x', 'y']]) замените 'x' и 'y' на имена столбцов в df1, которые содержат ваши признаки.
+
+2. Проверьте типы данных: 
+    * Убедитесь, что столбцы, которые вы используете для поиска ближайших соседей, имеют подходящий тип данных для выбранной метрики расстояния. Например, если вы используете евклидово расстояние (metric='euclidean'), то столбцы должны быть числовыми.
+
+Вот пример того, как это может выглядеть с другими именами столбцов:
+
+import pandas as pd
+from sklearn.neighbors import NearestNeighbors
+
+# Создаем два датафрейма
+df1 = pd.DataFrame({'feature1': [1, 2, 3], 'feature2': [4, 5, 6]})
+df2 = pd.DataFrame({'feature1': [1.5, 2.5, 3.5], 'feature2': [4.5, 5.5, 6.5]})
+
+# Создаем объект NearestNeighbors
+knn = NearestNeighbors(n_neighbors=1, metric='euclidean') 
+
+# Обучаем модель на датафрейме 2
+knn.fit(df2[['feature1', 'feature2']])
+
+# Находим ближайших соседей для каждой строки в df1
+distances, indices = knn.kneighbors(df1[['feature1', 'feature2']])
+
+# Создаем новый датафрейм с результатами
+results = pd.DataFrame({'df1_index': df1.index, 'df2_index': indices.flatten()})
+
+# Добавляем столбцы с информацией о ближайших соседях
+results = results.merge(df1, left_on='df1_index', right_index=True)
+results = results.merge(df2, left_on='df2_index', right_index=True, suffixes=('_df1', '_df2'))
+
+# Выводим результаты
+print(results)
+
+
+
+2,622/12,000
+
