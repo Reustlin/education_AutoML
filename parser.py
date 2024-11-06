@@ -162,3 +162,26 @@ print(results)
 
 2,622/12,000
 
+
+# Открываем файл для добавления форматирования
+wb = openpyxl.load_workbook(excel_path)
+ws = wb.active
+
+# Применяем форматирование к каждому столбцу
+for col in ws.columns:
+    max_length = 0
+    column = col[0].column  # Номер столбца
+
+    for cell in col:
+        # Устанавливаем перенос текста и выравнивание
+        cell.alignment = Alignment(wrap_text=True, vertical="top", horizontal="left")
+        # Измеряем длину содержимого для установки ширины
+        max_length = max(max_length, len(str(cell.value) or ""))
+
+    # Устанавливаем ширину столбца на основе максимальной длины текста
+    adjusted_width = max_length + 2
+    ws.column_dimensions[get_column_letter(column)].width = adjusted_width
+
+# Сохраняем изменения
+wb.save(excel_path)
+wb.close()
