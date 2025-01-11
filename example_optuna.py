@@ -7,6 +7,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from catboost import CatBoostRegressor
 from optuna.integration import OptunaSearchCV
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # загружаем датасет
 data = load_diabetes()
@@ -57,6 +59,10 @@ best_rf_model.fit(X_train, y_train)
 with open("best_rf_model.pkl", "wb") as f:
     pickle.dump(best_rf_model, f)
 
+# график важности параметров для RandomForest
+fig_rf = optuna.visualization.plot_param_importances(study_rf)
+fig_rf.show()
+
 # определяем функцию objective для CatBoost
 def objective_cb(trial):
     # предложите гиперпараметры модели CatBoost
@@ -102,6 +108,10 @@ best_cb_model.fit(X_train, y_train)
 with open("best_cb_model.pkl", "wb") as f:
     pickle.dump(best_cb_model, f)
 
+# график важности параметров для CatBoost
+fig_cb = optuna.visualization.plot_param_importances(study_cb)
+fig_cb.show()
+
 # OptunaSearchCV для RandomForest
 param_distributions_rf = {
     "n_estimators": optuna.distributions.IntUniformDistribution(10, 500),
@@ -125,6 +135,11 @@ print("Лучшие параметры для RandomForest (OptunaSearchCV):", o
 # сохраняем модель RandomForest из OptunaSearchCV в pkl-файл
 with open("best_rf_model_optuna_search.pkl", "wb") as f:
     pickle.dump(optuna_search_rf.best_estimator_, f)
+
+# график важности параметров для RandomForest (OptunaSearchCV)
+study_rf_cv = optuna_search_rf.study_
+fig_rf_cv = optuna.visualization.plot_param_importances(study_rf_cv)
+fig_rf_cv.show()
 
 # OptunaSearchCV для CatBoost
 param_distributions_cb = {
@@ -150,5 +165,10 @@ print("Лучшие параметры для CatBoost (OptunaSearchCV):", optun
 # сохраняем модель CatBoost из OptunaSearchCV в pkl-файл
 with open("best_cb_model_optuna_search.pkl", "wb") as f:
     pickle.dump(optuna_search_cb.best_estimator_, f)
+
+# график важности параметров для CatBoost (OptunaSearchCV)
+study_cb_cv = optuna_search_cb.study_
+fig_cb_cv = optuna.visualization.plot_param_importances(study_cb_cv)
+fig_cb_cv.show()
 
 print("Модели сохранены в файлы 'best_rf_model.pkl', 'best_cb_model.pkl', 'best_rf_model_optuna_search.pkl', и 'best_cb_model_optuna_search.pkl'.")
