@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from catboost import CatBoostRegressor
+from optuna.integration import OptunaSearchCV
 
 # загружаем датасет
 data = load_diabetes()
@@ -101,4 +102,53 @@ best_cb_model.fit(X_train, y_train)
 with open("best_cb_model.pkl", "wb") as f:
     pickle.dump(best_cb_model, f)
 
-print("Модели сохранены в файлы 'best_rf_model.pkl' и 'best_cb_model.pkl'.")
+# OptunaSearchCV для RandomForest
+param_distributions_rf = {
+    "n_estimators": optuna.distributions.IntUniformDistribution(10, 500),
+    "max_depth": optuna.distributions.IntUniformDistribution(2, 50),
+    "min_samples_split": optuna.distributions.IntUniformDistribution(2, 20),
+    "min_samples_leaf": optuna.distributions.IntUniformDistribution(1, 20),
+    "max_features": optuna.distributions.CategoricalDistribution(["auto", "sqrt", "log2"]),
+    "bootstrap": optuna.distributions.CategoricalDistribution([True, False])
+}
+optuna_search_rf = OptunaSearchCV(
+    RandomForestRegressor(random_state=42),
+    param_distributions_rf,
+    n_trials=50,
+    cv=3,
+    random_state=42,
+    scoring="neg_mean_squared_error"
+)
+optuna_search_rf.fit(X_train, y_train)
+print("Лучшие параметры для RandomForest (OptunaSearchCV):", optuna_search_rf.best_params_)
+
+# сохраняем модель RandomForest из OptunaSearchCV в pkl-файл
+with open("best_rf_model_optuna_search.pkl", "wb") as f:
+    pickle.dump(optuna_search_rf.best_estimator_, f)
+
+# OptunaSearchCV для CatBoost
+param_distributions_cb = {
+    "iterations": optuna.distributions.IntUniformDistribution(100, 2000),
+    "depth": optuna.distributions.IntUniformDistribution(4, 16),
+    "learning_rate": optuna.distributions.LogUniformDistribution(1e-3, 0.3),
+    "l2_leaf_reg": optuna.distributions.FloatUniformDistribution(1, 20),
+    "border_count": optuna.distributions.IntUniformDistribution(32, 255),
+    "bagging_temperature": optuna.distributions.FloatUniformDistribution(0, 10),
+    "grow_policy": optuna.distributions.CategoricalDistribution(["SymmetricTree", "Depthwise", "Lossguide"])
+}
+optuna_search_cb = OptunaSearchCV(
+    CatBoostRegressor(random_state=42, verbose=0),
+    param_distributions_cb,
+    n_trials=50,
+    cv=3,
+    random_state=42,
+    scoring="neg_mean_squared_error"
+)
+optuna_search_cb.fit(X_train, y_train)
+print("Лучшие параметры для CatBoost (OptunaSearchCV):", optuna_search_cb.best_params_)
+
+# сохраняем модель CatBoost из OptunaSearchCV в pkl-файл
+with open("best_cb_model_optuna_search.pkl", "wb") as f:
+    pickle.dump(optuna_search_cb.best_estimator_, f)
+
+print("Модели сохранены в файлы 'best_rf_model.pkl', 'best_cb_model.pkl', 'best_rf_model_optuna_search.pkl', и 'best_cb_model_optuna_search.pkl'.")
