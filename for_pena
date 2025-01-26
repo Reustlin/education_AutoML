@@ -257,3 +257,121 @@ cv2.destroyAllWindows()
 Если условия освещения меняются (например, тени или блики), алгоритм может давать ложные срабатывания или пропуски.
 Подход плохо справляется с сложными сценами, где пена и фон похожи по яркости или текстуре.
 Если требуется повышенная устойчивость к внешним условиям или более сложный анализ, тогда можно рассмотреть методы, основанные на обучении нейросетей.
+
+
+Код для второго подхода: Сегментация бортика и выделение ROI
+Шаг 1: Импорт библиотек и загрузка изображения
+python
+Копировать
+Редактировать
+import cv2
+import numpy as np
+
+# Загрузка изображения
+image = cv2.imread("path_to_image.jpg")
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # Преобразование в градации серого
+Шаг 2: Предварительная сегментация бортика
+Бортик можно выделить один раз для конкретной камеры, чтобы затем анализировать только эту область.
+
+python
+Копировать
+Редактировать
+# Используем Canny для выделения контуров
+edges = cv2.Canny(gray, threshold1=50, threshold2=150)
+
+# Применяем метод поиска контуров
+contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+# Находим самый длинный контур (предположительно бортик)
+largest_contour = max(contours, key=cv2.contourArea)
+
+# Создаем маску для выделения ROI
+mask = np.zeros_like(gray)
+cv2.drawContours(mask, [largest_contour], -1, (255), thickness=cv2.FILLED)
+
+# Применяем маску к изображению
+roi = cv2.bitwise_and(gray, gray, mask=mask)
+
+# Отображение ROI
+cv2.imshow("ROI", roi)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+Шаг 3: Анализ изменений в ROI
+Теперь, когда область бортика выделена, можно анализировать ее изменения, например, на наличие светлых пикселей, указывающих на перелив.
+
+python
+Копировать
+Редактировать
+# Настройка порога для определения светлых областей (например, пены)
+_, binary_roi = cv2.threshold(roi, 200, 255, cv2.THRESH_BINARY)
+
+# Подсчет количества светлых пикселей в ROI
+white_pixel_count = cv2.countNonZero(binary_roi)
+total_pixel_count = np.prod(binary_roi.shape)
+white_pixel_ratio = white_pixel_count / total_pixel_count
+
+# Определяем наличие перелива на основе порогового значения
+overflow_threshold = 0.05  # Например, если >5% области покрыто пеной
+if white_pixel_ratio > overflow_threshold:
+    print("Перелив обнаружен!")
+else:
+    print("Перелива нет.")
+Шаг 4: Анализ последовательности кадров
+Для анализа видео можно обрабатывать кадры в цикле, отслеживая изменения в ROI.
+
+python
+Копировать
+Редактировать
+# Захват видео
+cap = cv2.VideoCapture("path_to_video.mp4")
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Преобразование в градации серого и применение маски
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    roi_frame = cv2.bitwise_and(gray_frame, gray_frame, mask=mask)
+
+    # Анализ изменений в ROI
+    _, binary_frame = cv2.threshold(roi_frame, 200, 255, cv2.THRESH_BINARY)
+    white_pixel_count = cv2.countNonZero(binary_frame)
+    white_pixel_ratio = white_pixel_count / total_pixel_count
+
+    if white_pixel_ratio > overflow_threshold:
+        print("Перелив обнаружен!")
+    else:
+        print("Перелива нет.")
+
+    # Отображение текущего ROI
+    cv2.imshow("ROI Frame", roi_frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+Особенности реализации
+Предварительная сегментация бортика:
+
+Выполняется один раз для каждой камеры.
+После этого сохраняется маска mask, которая используется для выделения ROI на всех последующих кадрах.
+Настройка порогов:
+
+Порог для выделения пены (cv2.threshold).
+Порог отношения белых пикселей (overflow_threshold).
+Анализ последовательности кадров:
+
+Применяется тот же подход для обработки видео.
+Плюсы и минусы
+Плюсы:
+
+Подходит для всех камер с фиксированным углом обзора.
+Обработка происходит быстрее, поскольку анализируется только выделенная область.
+Нет необходимости в обучении модели.
+Минусы:
+
+Требуется предварительная настройка маски для каждой камеры.
+Чувствительность к изменению положения камеры.
+Возможны ложные срабатывания при сильных изменениях освещения.
+
