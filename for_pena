@@ -172,3 +172,64 @@ X, то фиксируется перелив.
 - Не требует глобальной разметки всего кадра.	- Требует большого количества размеченных данных для обучения.
 Устойчивость к изменениям	- Чувствителен к изменениям в условиях съемки (например, дрожание камеры).	- Высокая устойчивость внутри выделенной ROI, но менее эффективен при изменении положения бортика.	- Устойчив к небольшим изменениям при правильной дообученности.
 Обслуживание	- Легко поддерживать и адаптировать.	- Нужно вручную перенастраивать ROI при изменении положения камеры.	- Сложнее обновлять и переобучать при изменении условий.
+
+
+
+
+Слайд 1 - код
+import cv2
+import numpy as np
+
+# Пороговые значения (настраиваемые параметры)
+THRESHOLD_INTENSITY = 200  # Порог для определения ярких пикселей (пена)
+WHITE_PIXEL_AREA_THRESHOLD = 5000  # Минимальная площадь белых пикселей для классификации перелива
+
+# Загрузка изображения
+image_path = "path_to_image.jpg"  # Замените на путь к вашему изображению
+image = cv2.imread(image_path)
+
+# Шаг 1: Предобработка изображения
+# Конвертация в градации серого
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Устранение шума с помощью Гауссова размытия
+blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
+
+# Шаг 2: Выделение контуров
+# Использование алгоритма Canny для обнаружения границ
+edges = cv2.Canny(blurred_image, threshold1=50, threshold2=150)
+
+# Поиск контуров
+contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+# Отрисовка контуров для визуализации
+image_with_contours = image.copy()
+cv2.drawContours(image_with_contours, contours, -1, (0, 255, 0), 2)
+
+# Шаг 3: Анализ областей с яркостью
+# Применение порога для выделения ярких областей (пена)
+_, binary_mask = cv2.threshold(gray_image, THRESHOLD_INTENSITY, 255, cv2.THRESH_BINARY)
+
+# Подсчет количества белых пикселей в маске
+white_pixel_count = cv2.countNonZero(binary_mask)
+
+# Классификация перелива
+if white_pixel_count > WHITE_PIXEL_AREA_THRESHOLD:
+    print("Перелив обнаружен!")
+else:
+    print("Перелива нет.")
+
+# Шаг 4: Визуализация результатов
+# Объединение контуров и маски
+visualization = cv2.addWeighted(image_with_contours, 0.7, cv2.cvtColor(binary_mask, cv2.COLOR_GRAY2BGR), 0.3, 0)
+
+# Показ изображения
+cv2.imshow("Original Image", image)
+cv2.imshow("Contours", image_with_contours)
+cv2.imshow("Binary Mask", binary_mask)
+cv2.imshow("Visualization", visualization)
+
+# Ожидание нажатия клавиши для завершения
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
