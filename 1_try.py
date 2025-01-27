@@ -132,5 +132,83 @@ video_path = "example_video.mp4"  # Укажите путь к видео
 process_video(video_path, points, threshold, white_pixel_limit)
 
 
+import cv2
+import numpy as np
+from ultralytics import YOLO  # YOLOv8
+
+def process_video_combined(video_path, roi_points, threshold, white_pixel_limit, yolo_model_path):
+    # Шаг 1. Загрузка YOLO модели
+    model = YOLO(yolo_model_path)
+    
+    # Шаг 2. Открытие видео
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    foam_frames = 0
+    no_foam_frames = 0
+
+    # Создание ROI маски
+    mask = np.zeros((int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), 
+                     int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))), dtype=np.uint8)
+    cv2.fillPoly(mask, [np.array(roi_points, dtype=np.int32)], 255)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Шаг 3. Предварительная обработка
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        masked = cv2.bitwise_and(gray, gray, mask=mask)
+        blurred = cv2.GaussianBlur(masked, (5, 5), 0)
+        _, binary = cv2.threshold(blurred, threshold, 255, cv2.THRESH_BINARY)
+        white_pixels = cv2.countNonZero(binary)
+
+        # Шаг 4. Классификация с классическим CV
+        if white_pixels > white_pixel_limit:
+            status = "Есть пена"
+            foam_frames += 1
+        elif white_pixels < white_pixel_limit * 0.5:  # Явное отсутствие
+            status = "Нет пены"
+            no_foam_frames += 1
+        else:
+            # Шаг 5. Если состояние спорное, используем YOLO
+            results = model.predict(source=frame, conf=0.5, save=False, verbose=False)
+            if results[0].boxes.xyxy.shape[0] > 0:  # Обнаружен объект "пена"
+                status = "Есть пена"
+                foam_frames += 1
+            else:
+                status = "Нет пены"
+                no_foam_frames += 1
+
+        # Визуализация
+        cv2.putText(frame, f"Состояние: {status}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 
+                    1, (0, 255, 0) if status == "Нет пены" else (0, 0, 255), 2)
+        cv2.imshow("Video", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Подсчёт времени
+    foam_time = foam_frames / fps
+    no_foam_time = no_foam_frames / fps
+
+    print(f"\nРезультаты анализа:")
+    print(f"Время с пеной: {foam_time:.2f} секунд")
+    print(f"Время без пены: {no_foam_time:.2f} секунд")
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# Пример данных
+video_path = "example_video.mp4"
+roi_points = [(100, 200), (400, 200), (350, 300), (150, 300)]
+threshold = 200
+white_pixel_limit = 500
+yolo_model_path = "best.pt"
+
+# Запуск обработки
+process_video_combined(video_path, roi_points, threshold, white_pixel_limit, yolo_model_path)
+
+
 
 
